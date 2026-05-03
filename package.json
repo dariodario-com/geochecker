@@ -1,16 +1,16 @@
 {
-  "name": "@dariodario/geo-checker",
+  "name": "@dariodario/geochecker",
   "version": "0.1.0",
   "description": "Open-source Generative Engine Optimization (GEO) scorer. Check any site's readiness for AI search.",
   "license": "MIT",
   "author": "Dario Dario <hello@dariodario.com> (https://dariodario.com)",
-  "homepage": "https://github.com/dariodario-com/geo-checker#readme",
+  "homepage": "https://github.com/dariodario-com/geochecker#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dariodario-com/geo-checker.git"
+    "url": "git+https://github.com/dariodario-com/geochecker.git"
   },
   "bugs": {
-    "url": "https://github.com/dariodario-com/geo-checker/issues"
+    "url": "https://github.com/dariodario-com/geochecker/issues"
   },
   "keywords": [
     "geo",
@@ -33,7 +33,7 @@
     }
   },
   "bin": {
-    "geo-checker": "./dist/cli.js"
+    "geochecker": "./dist/cli.js"
   },
   "files": [
     "dist",

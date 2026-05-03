@@ -4,8 +4,8 @@
 
 > Check any site's readiness for AI search with our open-source Generative Engine Optimization (GEO) checker.
 
-[![npm](https://img.shields.io/npm/v/@dariodario/geo-checker.svg)](https://www.npmjs.com/package/@dariodario/geo-checker)
-[![license](https://img.shields.io/npm/l/@dariodario/geo-checker.svg)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/@dariodario/geochecker.svg)](https://www.npmjs.com/package/@dariodario/geochecker)
+[![license](https://img.shields.io/npm/l/@dariodario/geochecker.svg)](./LICENSE)
 
 GEO (Generative Engine Optimization) is the practice of structuring web pages so that LLMs — ChatGPT, Claude, Gemini, Perplexity, Google AI Overviews — can find, understand, and cite your content.
 
@@ -14,7 +14,7 @@ GEO Checker scores any URL across five categories with concrete, actionable find
 ## Quick start
 
 ```bash
-npx @dariodario/geo-checker https://example.com
+npx @dariodario/geochecker https://example.com
 ```
 
 ```
@@ -49,7 +49,7 @@ Each check returns a score, a finding, a detailed explanation, and a concrete fi
 ## Programmatic usage
 
 ```ts
-import { runChecks } from "@dariodario/geo-checker";
+import { runChecks } from "@dariodario/geochecker";
 
 const report = await runChecks("https://example.com");
 console.log(report.overall);          // 0–100
@@ -62,7 +62,7 @@ console.log(report.checks);           // every individual check + fix
 For live UIs that show findings as they come in:
 
 ```ts
-import { runChecksStream } from "@dariodario/geo-checker";
+import { runChecksStream } from "@dariodario/geochecker";
 
 for await (const evt of runChecksStream("https://example.com")) {
   if (evt.type === "fetched") console.log("page fetched");
@@ -74,7 +74,7 @@ for await (const evt of runChecksStream("https://example.com")) {
 ### Custom checks
 
 ```ts
-import { runChecks, defineCheck } from "@dariodario/geo-checker";
+import { runChecks, defineCheck } from "@dariodario/geochecker";
 
 const wordCountCheck = defineCheck(async (page) => {
   const text = page.html.replace(/<[^>]+>/g, " ");
@@ -109,7 +109,7 @@ const report = await runChecks("https://example.com", {
 
 ```yaml
 # .github/workflows/seo.yml
-- run: npx @dariodario/geo-checker https://your-staging-site.com --min-score 75
+- run: npx @dariodario/geochecker https://your-staging-site.com --min-score 75
 ```
 
 ## Hosted version
@@ -118,11 +118,11 @@ Want comparison against a competitor, score history over time, branded PDF repor
 
 ## Contributing
 
-PRs welcome — particularly for new checks. Please open a [Discussion](https://github.com/dariodario-com/geo-checker/discussions) first if proposing a substantial addition.
+PRs welcome — particularly for new checks. Please open a [Discussion](https://github.com/dariodario-com/geochecker/discussions) first if proposing a substantial addition.
 
 ```bash
-git clone https://github.com/dariodario-com/geo-checker
-cd geo-checker
+git clone https://github.com/dariodario-com/geochecker
+cd geochecker
 npm install
 npm run build
 npm test

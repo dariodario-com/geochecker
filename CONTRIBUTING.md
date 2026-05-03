@@ -4,14 +4,14 @@ Thanks for your interest. A few notes to set expectations.
 
 ## Maintenance posture
 
-GEO Checker is maintained by [Dario Dario](https://dariodario.com) as an open-source companion to our hosted GEO scoring service. We triage issues and PRs roughly weekly. For substantial changes, please open a [Discussion](https://github.com/dariodario-com/geo-checker/discussions) before writing the code so we can align on direction.
+GEO Checker is maintained by [Dario Dario](https://dariodario.com) as an open-source companion to our hosted GEO scoring service. We triage issues and PRs roughly weekly. For substantial changes, please open a [Discussion](https://github.com/dariodario-com/geochecker/discussions) before writing the code so we can align on direction.
 
 ## Adding a new check
 
 A check is an async function that takes a `FetchedPage` and returns a `CheckResult`:
 
 ```ts
-import type { Check } from "@dariodario/geo-checker";
+import type { Check } from "@dariodario/geochecker";
 
 export const myCheck: Check = async (page) => {
   return {
@@ -32,8 +32,8 @@ Add the check to `src/checks/`, register it in `src/index.ts` under `builtinChec
 ## Local development
 
 ```bash
-git clone https://github.com/dariodario-com/geo-checker
-cd geo-checker
+git clone https://github.com/dariodario-com/geochecker
+cd geochecker
 npm install
 npm run build       # compile TS → dist/
 npm test            # run test suite

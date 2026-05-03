@@ -25,10 +25,10 @@ function parseArgs(argv: string[]): Flags {
 
 function help() {
 	console.log(`
-geo-checker — open-source GEO scorer
+geochecker — open-source GEO scorer
 
 Usage:
-  geo-checker <url> [options]
+  geochecker <url> [options]
 
 Options:
   --json                 Output the full report as JSON (machine-readable)
@@ -38,9 +38,9 @@ Options:
   -h, --help             Show this help
 
 Examples:
-  geo-checker https://example.com
-  geo-checker https://example.com --json | jq .
-  geo-checker https://example.com --min-score 70
+  geochecker https://example.com
+  geochecker https://example.com --json | jq .
+  geochecker https://example.com --min-score 70
 
 Hosted version with comparison + history: https://dariodario.com/geo-check
 `.trim());
