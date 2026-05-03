@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 import { detectGenre } from "../genre.js";
 
@@ -79,6 +79,14 @@ export async function checkFreshness(
 					? "Expose at least one date signal: a Last-Modified header, a <time datetime=\"YYYY-MM-DD\"> element near the title, or schema datePublished/dateModified."
 					: "Optional for brand pages. If you make claims that change over time (pricing, statistics, product capabilities), add a 'last updated' date so LLMs can reason about staleness.",
 			weight: 0.9,
+			codes: [
+				{
+					code:
+						genre === "article"
+							? "freshness.no_signals_article"
+							: "freshness.no_signals_brand",
+				},
+			],
 		};
 	}
 
@@ -86,12 +94,33 @@ export async function checkFreshness(
 	const ageDays = Math.floor((Date.now() - newest.date.getTime()) / DAY);
 
 	let score: number;
-	if (ageDays < 0) score = 60;
-	else if (ageDays < 90) score = 100;
-	else if (ageDays < 365) score = 85;
-	else if (ageDays < 730) score = 60;
-	else if (ageDays < 1825) score = 40;
-	else score = 20;
+	let bucket: string;
+	if (ageDays < 0) {
+		score = 60;
+		bucket = "freshness.aging";
+	} else if (ageDays < 90) {
+		score = 100;
+		bucket = "freshness.fresh";
+	} else if (ageDays < 365) {
+		score = 85;
+		bucket = "freshness.recent";
+	} else if (ageDays < 730) {
+		score = 60;
+		bucket = "freshness.aging";
+	} else if (ageDays < 1825) {
+		score = 40;
+		bucket = "freshness.stale";
+	} else {
+		score = 20;
+		bucket = "freshness.very_stale";
+	}
+
+	const codes: CheckCode[] = [
+		{
+			code: bucket,
+			data: { ageDays, isoDate: newest.date.toISOString().split("T")[0] },
+		},
+	];
 
 	const finding = `Newest date signal: ${newest.date.toISOString().split("T")[0]} (${ageDays} day${ageDays === 1 ? "" : "s"} ago).`;
 
@@ -113,6 +142,7 @@ export async function checkFreshness(
 		detail,
 		fix,
 		weight: 1.0,
+		codes,
 	};
 }
 

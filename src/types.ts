@@ -7,6 +7,21 @@ export type Category =
 	| "freshness"
 	| "authority";
 
+/**
+ * A structured, language-independent identifier for a specific finding within
+ * a check. Frontends use these to render localized copy. Each code is
+ * namespaced by check id (e.g. `structure.no_h2_sections`). Optional `data`
+ * carries values for interpolation (e.g. `{ wordCount: 17 }` for
+ * `structure.thin_content`).
+ *
+ * Code IDs are stable within a major version; the English prose in
+ * `CheckResult.finding` may be rewritten freely. Treat codes as the contract.
+ */
+export type CheckCode = {
+	code: string;
+	data?: Record<string, unknown>;
+};
+
 export type CheckResult = {
 	id: string;
 	category: Category;
@@ -16,6 +31,12 @@ export type CheckResult = {
 	detail: string;
 	fix: string;
 	weight: number;
+	/**
+	 * Structured codes describing the specific issues observed. Optional for
+	 * backwards compatibility — older checks may not emit these. All built-in
+	 * checks emit codes from v1.1.0 onwards.
+	 */
+	codes?: CheckCode[];
 };
 
 export type FetchedPage = {

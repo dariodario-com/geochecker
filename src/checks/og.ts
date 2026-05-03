@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 
 export async function checkOg(page: FetchedPage): Promise<CheckResult> {
@@ -23,32 +23,52 @@ export async function checkOg(page: FetchedPage): Promise<CheckResult> {
 		"";
 
 	const issues: string[] = [];
+	const codes: CheckCode[] = [];
 	let score = 0;
 
 	if (title.length >= 25 && title.length <= 70) score += 20;
 	else if (title.length > 0) {
 		score += 10;
 		issues.push(`title length ${title.length} (target 25–70)`);
-	} else issues.push("missing <title>");
+		codes.push({ code: "og.title_length", data: { length: title.length } });
+	} else {
+		issues.push("missing <title>");
+		codes.push({ code: "og.title_missing" });
+	}
 
 	if (desc.length >= 70 && desc.length <= 170) score += 20;
 	else if (desc.length > 0) {
 		score += 10;
 		issues.push(`meta description length ${desc.length} (target 70–170)`);
-	} else issues.push("missing meta description");
+		codes.push({ code: "og.description_length", data: { length: desc.length } });
+	} else {
+		issues.push("missing meta description");
+		codes.push({ code: "og.description_missing" });
+	}
 
 	if (ogTitle) score += 15;
-	else issues.push("missing og:title");
+	else {
+		issues.push("missing og:title");
+		codes.push({ code: "og.no_og_title" });
+	}
 
 	if (ogDesc) score += 15;
-	else issues.push("missing og:description");
+	else {
+		issues.push("missing og:description");
+		codes.push({ code: "og.no_og_description" });
+	}
 
 	if (ogImage) score += 20;
-	else issues.push("missing og:image");
+	else {
+		issues.push("missing og:image");
+		codes.push({ code: "og.no_og_image" });
+	}
 
 	if (ogType) score += 10;
 
 	score = Math.min(100, score);
+
+	if (codes.length === 0) codes.push({ code: "og.ok" });
 
 	const finding =
 		issues.length === 0
@@ -71,5 +91,6 @@ export async function checkOg(page: FetchedPage): Promise<CheckResult> {
 		detail,
 		fix,
 		weight: 0.7,
+		codes,
 	};
 }

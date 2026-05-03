@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 import { detectGenre } from "../genre.js";
 
@@ -53,32 +53,65 @@ export async function checkCitability(
 
 	let score = 0;
 	const reasons: string[] = [];
+	const codes: CheckCode[] = [];
 
 	if (genre === "article") {
 		if (author) score += 25;
-		else reasons.push("no author byline detected");
+		else {
+			reasons.push("no author byline detected");
+			codes.push({ code: "citability.no_author" });
+		}
 
 		if (date) score += 25;
-		else reasons.push("no published/updated date");
+		else {
+			reasons.push("no published/updated date");
+			codes.push({ code: "citability.no_date" });
+		}
 
 		if (outboundCitations >= 3) score += 25;
 		else if (outboundCitations >= 1) score += 12;
-		else reasons.push("no outbound source links");
+		else {
+			reasons.push("no outbound source links");
+			codes.push({ code: "citability.no_outbound_citations" });
+		}
 
 		if (fluffRatio < 0.04) score += 25;
 		else if (fluffRatio < 0.08) score += 12;
-		else reasons.push("high marketing language density");
+		else {
+			reasons.push("high marketing language density");
+			codes.push({ code: "citability.high_fluff", data: { ratio: fluffRatio } });
+		}
+
+		if (codes.length === 0) {
+			codes.push({
+				code: "citability.ok_article",
+				data: { outboundCitations, fluffRatio },
+			});
+		}
 	} else {
 		score = 30;
 		if (outboundCitations >= 3) score += 25;
 		else if (outboundCitations >= 1) score += 12;
-		else reasons.push("no outbound source links");
+		else {
+			reasons.push("no outbound source links");
+			codes.push({ code: "citability.no_outbound_citations" });
+		}
 
 		if (fluffRatio < 0.04) score += 25;
 		else if (fluffRatio < 0.08) score += 12;
-		else reasons.push("high marketing language density");
+		else {
+			reasons.push("high marketing language density");
+			codes.push({ code: "citability.high_fluff", data: { ratio: fluffRatio } });
+		}
 
 		score = Math.min(80, score);
+
+		if (codes.length === 0) {
+			codes.push({
+				code: "citability.ok_brand",
+				data: { outboundCitations, fluffRatio },
+			});
+		}
 	}
 
 	score = Math.min(100, score);
@@ -108,6 +141,7 @@ export async function checkCitability(
 		detail,
 		fix,
 		weight: 1.5,
+		codes,
 	};
 }
 

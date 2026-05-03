@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 
 const ABOUT_PATTERNS = [
@@ -69,25 +69,45 @@ export async function checkAuthority(
 
 	let score = 0;
 	const issues: string[] = [];
+	const codes: CheckCode[] = [];
 
 	if (hasOrg) score += 30;
-	else issues.push("no Organization schema");
+	else {
+		issues.push("no Organization schema");
+		codes.push({ code: "authority.no_organization" });
+	}
 
 	if (sameAsCount >= 3) score += 25;
 	else if (sameAsCount >= 1) score += 12;
-	else if (hasOrg) issues.push("Organization has no sameAs links");
+	else if (hasOrg) {
+		issues.push("Organization has no sameAs links");
+		codes.push({ code: "authority.no_sameas" });
+	}
 
 	if (hasLogo) score += 10;
 
 	if (aboutLink) score += 15;
-	else issues.push("no About page link");
+	else {
+		issues.push("no About page link");
+		codes.push({ code: "authority.no_about_link" });
+	}
 
 	if (contactLink || mailto) score += 10;
-	else issues.push("no contact link or mailto");
+	else {
+		issues.push("no contact link or mailto");
+		codes.push({ code: "authority.no_contact" });
+	}
 
 	if (tel) score += 10;
 
 	score = Math.min(100, score);
+
+	if (codes.length === 0) {
+		codes.push({
+			code: "authority.ok",
+			data: { sameAsCount, hasLogo, aboutLink, contactLink, mailto, tel },
+		});
+	}
 
 	const finding =
 		issues.length === 0
@@ -110,6 +130,7 @@ export async function checkAuthority(
 		detail,
 		fix,
 		weight: 1.2,
+		codes,
 	};
 }
 

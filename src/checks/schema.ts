@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 
 const RECOGNIZED = new Set([
@@ -72,6 +72,7 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 	let finding: string;
 	let detail: string;
 	let fix: string;
+	const codes: CheckCode[] = [];
 
 	if (parsed.length === 0) {
 		finding = "No structured data detected.";
@@ -79,20 +80,33 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 			"No JSON-LD blocks found in the page source. LLMs use structured data to identify entities, articles, and authority signals.";
 		fix =
 			"Add a JSON-LD <script type=\"application/ld+json\"> block. Start with Organization (name, url, sameAs to social profiles) and add Article or Product schema on relevant pages.";
+		codes.push({ code: "schema.no_jsonld" });
 	} else if (invalid > 0) {
 		finding = `${parsed.length} JSON-LD block(s) found, ${invalid} could not be parsed.`;
 		detail = `Recognized types: ${[...types].join(", ") || "none"}. ${invalid} block(s) contained invalid JSON.`;
 		fix = "Validate JSON-LD with a linter before deploy. Invalid blocks are silently dropped by Google and most LLM crawlers.";
+		codes.push({
+			code: "schema.invalid_blocks",
+			data: { invalidCount: invalid, totalCount: parsed.length + invalid },
+		});
 	} else if (!hasOrg) {
 		finding = "Structured data present, but no Organization schema.";
 		detail = `Recognized types: ${[...types].join(", ") || "none"}. Without Organization, entity resolution falls back to name-matching.`;
 		fix =
 			"Add Organization schema with name, url, logo, and sameAs links to your verified social profiles (LinkedIn, X, GitHub).";
+		codes.push({
+			code: "schema.no_organization",
+			data: { recognizedTypes: [...types] },
+		});
 	} else {
 		finding = `${parsed.length} structured data block(s), Organization present.`;
 		detail = `Recognized types: ${[...types].join(", ")}.`;
 		fix =
 			"Extend with content-specific types (Article, Product, FAQPage) on the pages they apply to.";
+		codes.push({
+			code: "schema.ok",
+			data: { blockCount: parsed.length, recognizedTypes: [...types] },
+		});
 	}
 
 	return {
@@ -104,6 +118,7 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		detail,
 		fix,
 		weight: 1.4,
+		codes,
 	};
 }
 

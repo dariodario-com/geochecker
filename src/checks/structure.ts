@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 
 export async function checkStructure(
@@ -26,23 +26,30 @@ export async function checkStructure(
 
 	let score = 0;
 	const issues: string[] = [];
+	const codes: CheckCode[] = [];
 
 	if (empty) {
 		score = 5;
 		issues.push("page renders empty without JS");
+		codes.push({ code: "structure.empty_shell", data: { wordCount } });
 	} else {
 		if (h1s.length === 1) score += 25;
 		else if (h1s.length === 0) {
 			score += 0;
 			issues.push("no H1");
+			codes.push({ code: "structure.no_h1" });
 		} else {
 			score += 10;
 			issues.push(`${h1s.length} H1 elements`);
+			codes.push({ code: "structure.multiple_h1", data: { count: h1s.length } });
 		}
 
 		if (h2s.length >= 2) score += 20;
 		else if (h2s.length === 1) score += 10;
-		else issues.push("no H2 sections");
+		else {
+			issues.push("no H2 sections");
+			codes.push({ code: "structure.no_h2_sections" });
+		}
 
 		if (h3s.length > 0) score += 5;
 
@@ -58,9 +65,22 @@ export async function checkStructure(
 		if (wordCount >= 800) score += 25;
 		else if (wordCount >= 400) score += 15;
 		else if (wordCount >= 150) score += 5;
-		else issues.push(`thin content (${wordCount} words)`);
+		else {
+			issues.push(`thin content (${wordCount} words)`);
+			codes.push({ code: "structure.thin_content", data: { wordCount } });
+		}
 
-		if (semantic.main === 0) issues.push("no <main> landmark");
+		if (semantic.main === 0) {
+			issues.push("no <main> landmark");
+			codes.push({ code: "structure.no_main" });
+		}
+
+		if (codes.length === 0) {
+			codes.push({
+				code: "structure.ok",
+				data: { h1: h1s.length, h2: h2s.length, wordCount },
+			});
+		}
 	}
 
 	score = Math.min(100, Math.max(0, score));
@@ -90,6 +110,7 @@ export async function checkStructure(
 		detail,
 		fix,
 		weight: 1.3,
+		codes,
 	};
 }
 

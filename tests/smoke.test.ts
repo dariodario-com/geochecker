@@ -36,6 +36,18 @@ test("each builtin check returns a well-formed CheckResult", async () => {
 	}
 });
 
+test("each builtin check emits at least one structured code", async () => {
+	for (const check of builtinChecks) {
+		const r: CheckResult = await check(fakePage);
+		assert.ok(Array.isArray(r.codes), `codes missing for ${check.name}`);
+		assert.ok(r.codes!.length > 0, `no codes emitted by ${check.name}`);
+		for (const c of r.codes!) {
+			assert.equal(typeof c.code, "string");
+			assert.ok(c.code.includes("."), `code "${c.code}" should be namespaced`);
+		}
+	}
+});
+
 test("defineCheck is a passthrough", () => {
 	const c: Check = async () => ({
 		id: "x", category: "structure", score: 100, status: "pass",

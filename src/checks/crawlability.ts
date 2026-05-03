@@ -1,4 +1,4 @@
-import type { CheckResult, FetchedPage } from "../types.js";
+import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { fetchText, originOf } from "../fetch.js";
 import { statusFor } from "../scoring.js";
 
@@ -36,6 +36,9 @@ export async function checkCrawlability(
 			detail: `Fetched ${robotsUrl} → ${res?.status ?? "no response"}. Without explicit rules, well-behaved crawlers proceed by default.`,
 			fix: "Add a robots.txt that explicitly allows or blocks each AI crawler (GPTBot, ClaudeBot, Claude-Web, Google-Extended, PerplexityBot, CCBot). Silence is permissive but ambiguous.",
 			weight: 1.2,
+			codes: [
+				{ code: "crawlability.no_robots_txt", data: { status: res?.status ?? null } },
+			],
 		};
 	}
 
@@ -64,20 +67,39 @@ export async function checkCrawlability(
 
 	let score: number;
 	let finding: string;
+	const codes: CheckCode[] = [];
 
 	if (blocked.length > 0 || wildcardBlocks) {
 		score = 0;
 		const list = wildcardBlocks ? "all crawlers (User-agent: *)" : blocked.join(", ");
 		finding = `AI crawlers blocked: ${list}.`;
+		if (wildcardBlocks) {
+			codes.push({ code: "crawlability.wildcard_block" });
+		} else {
+			codes.push({ code: "crawlability.ai_bots_blocked", data: { blocked } });
+		}
 	} else if (explicitlyAllowed.length >= 3) {
 		score = 100;
 		finding = `${explicitlyAllowed.length} AI crawlers explicitly allowed in robots.txt.`;
+		codes.push({
+			code: "crawlability.ok_explicit_allow",
+			data: { count: explicitlyAllowed.length, names: explicitlyAllowed },
+		});
 	} else if (explicitlyAllowed.length > 0) {
 		score = 75;
 		finding = `${explicitlyAllowed.length} AI crawler(s) addressed; ${silent.length} silent (default-allow).`;
+		codes.push({
+			code: "crawlability.partial_explicit",
+			data: {
+				allowedCount: explicitlyAllowed.length,
+				silentCount: silent.length,
+				allowed: explicitlyAllowed,
+			},
+		});
 	} else {
 		score = 60;
 		finding = "robots.txt present but no AI crawler rules.";
+		codes.push({ code: "crawlability.no_ai_rules" });
 	}
 
 	const detail = [
@@ -102,6 +124,7 @@ export async function checkCrawlability(
 		detail,
 		fix,
 		weight: 1.5,
+		codes,
 	};
 }
 
