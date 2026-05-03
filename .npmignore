@@ -1,0 +1,11 @@
+# Test + dev tooling — not shipped to npm
+tests/
+examples/
+.github/
+tsconfig.json
+*.log
+
+# Source is shipped (in `files`), but exclude editor / OS junk
+.vscode/
+.idea/
+.DS_Store

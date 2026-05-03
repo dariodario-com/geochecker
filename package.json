@@ -1,0 +1,61 @@
+{
+  "name": "@dariodario/geo-checker",
+  "version": "0.1.0",
+  "description": "Open-source Generative Engine Optimization (GEO) scorer. Check any site's readiness for AI search.",
+  "license": "MIT",
+  "author": "Dario Dario <hello@dariodario.com> (https://dariodario.com)",
+  "homepage": "https://github.com/dariodario-com/geo-checker#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dariodario-com/geo-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dariodario-com/geo-checker/issues"
+  },
+  "keywords": [
+    "geo",
+    "generative-engine-optimization",
+    "ai-search",
+    "llm-seo",
+    "seo",
+    "structured-data",
+    "schema",
+    "llms-txt",
+    "site-audit"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "geo-checker": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test 'tests/**/*.test.ts'",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "node-html-parser": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.3"
+  }
+}
