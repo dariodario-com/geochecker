@@ -128,6 +128,18 @@ npm run build
 npm test
 ```
 
+## Releasing (maintainers)
+
+Manual: tag pushes only run build/test in CI; `npm publish` runs from a maintainer's laptop.
+
+```bash
+npm version patch  # or minor / major — bumps package.json + creates tag
+git push --follow-tags
+npm publish --access public
+```
+
+`npm publish` will prompt for browser OTP if `npm login` has expired. The CI workflow on the tag push runs typecheck/build/test as a release-readiness gate; a green check means the tarball would have built cleanly.
+
 ## About
 
 Built and maintained by [Dario Dario](https://dariodario.com), an AI-native studio in Stockholm. We design and ship AI agents for SMEs.
