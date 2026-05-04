@@ -21,11 +21,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
-      # setup-node writes `_authToken=${NODE_AUTH_TOKEN}` to ~/.npmrc.
-      # With OIDC we have no token env, so the line becomes empty and npm
-      # sends an empty bearer instead of letting OIDC take over. Strip it.
-      - run: npm config delete //registry.npmjs.org/:_authToken --location user || true
-      - run: npm publish --access public --provenance
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
