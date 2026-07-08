@@ -1,51 +1,49 @@
-import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
+import type { CheckResult, FetchedPage } from "../types.js";
 import { fetchText, originOf } from "../fetch.js";
-import { statusFor } from "../scoring.js";
 
-export async function checkLlmsTxt(
-	page: FetchedPage,
-): Promise<CheckResult> {
+/**
+ * llms.txt is INFORMATIONAL ONLY — weight 0, never affects the score.
+ *
+ * As of mid-2026 the evidence is that no major AI search engine consumes
+ * llms.txt for retrieval or citation: Ahrefs found ~97% of llms.txt files
+ * received zero bot requests (137K domains, Jun 2026) and Google (Mueller,
+ * Illyes) states no AI system uses it. Its only confirmed real use is routing
+ * for developer coding agents (Cursor, Mintlify, docs tooling). We still report
+ * its presence as a neutral note, but we no longer treat its absence as a
+ * problem — docking points for a missing file that AI search ignores would be
+ * misleading.
+ */
+export async function checkLlmsTxt(page: FetchedPage): Promise<CheckResult> {
 	const url = `${originOf(page.finalUrl)}/llms.txt`;
 	const res = await fetchText(url);
+	const present = Boolean(res && res.status < 400);
 
-	if (!res || res.status >= 400) {
+	// Always score 100 / pass: this check no longer penalises. The signal is
+	// entirely in the copy.
+	if (!present) {
 		return {
 			id: "llms_txt",
 			category: "structure",
-			score: 40,
-			status: statusFor(40),
-			finding: "No /llms.txt found.",
-			detail: `Fetched ${url} → ${res?.status ?? "no response"}. The llms.txt convention (llmstxt.org) lets you offer LLMs a curated map of your site's primary content in markdown.`,
-			fix: "Publish /llms.txt at your root with a top-level H1 (site name), a short description, and markdown links to your primary content sections. Optionally add /llms-full.txt with the full content concatenated.",
-			weight: 0.8,
-			codes: [{ code: "llms_txt.missing", data: { status: res?.status ?? null } }],
+			score: 100,
+			status: "pass",
+			finding: "No /llms.txt — not needed for AI-search citation.",
+			detail: `Fetched ${url} → ${res?.status ?? "no response"}. As of 2026 no major AI search engine reads llms.txt (Ahrefs: ~97% of such files get zero bot requests; Google confirms it is unused). This is informational only and does not affect your score.`,
+			fix: "Nothing required. Only publish /llms.txt if you want to help developer coding agents (Cursor, Mintlify, docs tooling) navigate your content — it is not an AI-search ranking or citation signal.",
+			weight: 0,
+			codes: [{ code: "llms_txt.not_used", data: { status: res?.status ?? null } }],
 		};
 	}
 
-	const text = res.text.trim();
-	const lines = text.split(/\r?\n/);
-	const hasH1 = lines.some((l) => /^#\s+\S/.test(l));
-	const hasLinks = /\[[^\]]+\]\([^)]+\)/.test(text);
-	const sufficient = text.length > 100 && hasH1 && hasLinks;
-
-	const score = sufficient ? 100 : hasH1 || hasLinks ? 60 : 30;
-	const codes: CheckCode[] = sufficient
-		? [{ code: "llms_txt.ok", data: { bytes: text.length } }]
-		: [{ code: "llms_txt.minimal", data: { bytes: text.length, hasH1, hasLinks } }];
-
+	const bytes = res!.text.trim().length;
 	return {
 		id: "llms_txt",
 		category: "structure",
-		score,
-		status: statusFor(score),
-		finding: sufficient
-			? "/llms.txt present and well-formed."
-			: "/llms.txt present but minimal.",
-		detail: `${text.length} bytes. H1: ${hasH1 ? "yes" : "no"}. Markdown links: ${hasLinks ? "yes" : "no"}.`,
-		fix: sufficient
-			? "Maintain. Update when the site's information architecture changes."
-			: "Add an H1 with the site name, a one-paragraph description, and grouped markdown links to primary content sections (Docs, Blog, About, etc.).",
-		weight: 0.8,
-		codes,
+		score: 100,
+		status: "pass",
+		finding: "/llms.txt present — useful for coding agents, not AI search.",
+		detail: `${bytes} bytes. llms.txt helps developer coding agents (Cursor, Mintlify, docs tooling) route your content, but no major AI search engine uses it for citation. Informational only — it does not affect your score.`,
+		fix: "Keep it if it serves your docs/coding-agent audience. It has no effect on AI-search visibility either way.",
+		weight: 0,
+		codes: [{ code: "llms_txt.present", data: { bytes } }],
 	};
 }

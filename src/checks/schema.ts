@@ -100,9 +100,9 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		});
 	} else {
 		finding = `${parsed.length} structured data block(s), Organization present.`;
-		detail = `Recognized types: ${[...types].join(", ")}.`;
+		detail = `Recognized types: ${[...types].join(", ")}. Note: controlled 2026 tests (Ahrefs) found adding schema alone does not lift AI citations — its value is entity resolution and completeness, not mere presence.`;
 		fix =
-			"Extend with content-specific types (Article, Product, FAQPage) on the pages they apply to.";
+			"Table-stakes done. The lever now is completeness: use attribute-rich types on the pages they apply to (Product with brand/price/rating, Article with author + dates). Bare schema won't move citations on its own.";
 		codes.push({
 			code: "schema.ok",
 			data: { blockCount: parsed.length, recognizedTypes: [...types] },
@@ -117,7 +117,10 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		finding,
 		detail,
 		fix,
-		weight: 1.4,
+		// Down-weighted from 1.4: 2026 controlled tests show bare JSON-LD does
+		// not causally lift AI citations. Kept as a hygiene/entity-resolution
+		// signal, not a primary lever.
+		weight: 1.0,
 		codes,
 	};
 }

@@ -40,11 +40,15 @@ CRAWLABILITY  (80/100)
 |---|---|---|
 | **Structure** | Schema.org JSON-LD, heading hierarchy, semantic HTML landmarks | LLMs use structured data to identify entities, articles, authors, products |
 | **Citability** | Author bylines, publish dates, source attribution, factual density | LLMs preferentially cite content with clear authorship and verifiable claims |
-| **Crawlability** | `robots.txt` policy for AI crawlers, indexability, response codes | If you block GPTBot/ClaudeBot/etc., you're invisible to those engines |
+| **Crawlability** | `robots.txt` policy for AI crawlers, by **purpose** (search / live-fetch / training) | If you block the AI *search* crawlers you're invisible to those engines — but blocking *training-only* crawlers is a legitimate opt-out that does **not** reduce citation |
 | **Freshness** | Last-modified dates, content recency signals | LLMs weight recent content higher for time-sensitive queries |
 | **Authority** | Outbound links, mentions of credentialed sources, internal linking depth | LLMs use authority signals when picking which source to cite |
 
 Each check returns a score, a finding, a detailed explanation, and a concrete fix.
+
+> **A good page score is necessary, not sufficient.** The single strongest driver of AI citations in 2025–2026 studies is **off-page authority** — how often your brand is mentioned across the web (Reddit, YouTube, Wikipedia, review sites, earned media). A page scanner can't see that. Use this tool to remove on-page blockers; win the citation with brand presence the scanner can't measure.
+>
+> **On `llms.txt`:** it's reported informationally and does **not** affect your score. As of 2026 no major AI search engine consumes it for citation (Ahrefs found ~97% of `llms.txt` files get zero bot requests); it's a developer coding-agent convention, not an AI-search signal.
 
 ## Programmatic usage
 

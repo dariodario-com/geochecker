@@ -2,17 +2,57 @@ import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { fetchText, originOf } from "../fetch.js";
 import { statusFor } from "../scoring.js";
 
-const AI_BOTS = [
+/**
+ * AI crawlers grouped by PURPOSE. This distinction is the whole point of the
+ * 2026 robots.txt model (IETF AIPREF `train-ai` vs `search`; Cloudflare's
+ * purpose-based defaults): being cited by AI search depends on letting the
+ * SEARCH and LIVE-fetch crawlers through. Blocking TRAINING-only crawlers is a
+ * legitimate IP/privacy choice that does NOT reduce citation — so we never
+ * penalise it.
+ *
+ * `Google-Extended` / `Applebot-Extended` are intentionally omitted: they are
+ * robots.txt control tokens, not crawlers. They govern downstream training use
+ * of content already fetched by Googlebot/Applebot, and blocking them has no
+ * effect on search or citation.
+ */
+
+// Crawlers that build the retrieval index AI search products answer from.
+// Allowing these is what keeps you eligible to be cited.
+const SEARCH_BOTS = [
+	"OAI-SearchBot",
+	"PerplexityBot",
+	"Claude-SearchBot",
+	"Applebot",
+	"Amazonbot",
+	"Meta-WebIndexer",
+	"DuckAssistBot",
+];
+
+// User-triggered agents that fetch a page in real time when someone asks about
+// it. Secondary to search but still a live path into an answer.
+const LIVE_BOTS = [
+	"ChatGPT-User",
+	"Claude-User",
+	"Perplexity-User",
+	"MistralAI-User",
+	"Meta-ExternalFetcher",
+	"Google-CloudVertexBot",
+];
+
+// Training-only crawlers. Blocking these does not affect AI-search citation.
+const TRAINING_BOTS = [
 	"GPTBot",
 	"ClaudeBot",
-	"Claude-Web",
-	"anthropic-ai",
-	"Google-Extended",
-	"PerplexityBot",
+	"Meta-ExternalAgent",
 	"CCBot",
-	"Applebot-Extended",
+	"cohere-ai",
 	"Bytespider",
 ];
+
+// Crawlers that build the citation surface. Search matters most, but a blocked
+// live-fetch agent still removes a real path into an answer, so we score
+// reachability across both.
+const CITATION_BOTS = [...SEARCH_BOTS, ...LIVE_BOTS];
 
 type RobotsRule = {
 	agents: string[];
@@ -26,106 +66,135 @@ export async function checkCrawlability(
 	const robotsUrl = `${originOf(page.finalUrl)}/robots.txt`;
 	const res = await fetchText(robotsUrl);
 
+	// No robots.txt → every crawler reaches you by default. For citation that's
+	// the good outcome, not an ambiguity to punish.
 	if (!res || res.status >= 400) {
-		return {
-			id: "crawlability",
-			category: "crawlability",
-			score: 60,
-			status: statusFor(60),
-			finding: "No robots.txt found. AI crawlers will use default behavior (allow).",
-			detail: `Fetched ${robotsUrl} → ${res?.status ?? "no response"}. Without explicit rules, well-behaved crawlers proceed by default.`,
-			fix: "Add a robots.txt that explicitly allows or blocks each AI crawler (GPTBot, ClaudeBot, Claude-Web, Google-Extended, PerplexityBot, CCBot). Silence is permissive but ambiguous.",
-			weight: 1.2,
+		return result({
+			score: 90,
+			finding:
+				"No robots.txt — AI search crawlers can reach you by default.",
+			detail: `Fetched ${robotsUrl} → ${res?.status ?? "no response"}. Without rules, well-behaved crawlers proceed, so you stay eligible for AI-search citation. The only thing you give up is the ability to opt out of model training.`,
+			fix: "Optional: add a robots.txt only if you want to opt out of AI training (block GPTBot, ClaudeBot, CCBot) while keeping the search crawlers (OAI-SearchBot, PerplexityBot, Claude-SearchBot) allowed. Blocking training does not hurt citation.",
 			codes: [
-				{ code: "crawlability.no_robots_txt", data: { status: res?.status ?? null } },
+				{
+					code: "crawlability.no_robots_txt",
+					data: { status: res?.status ?? null },
+				},
 			],
-		};
+		});
 	}
 
 	const rules = parseRobots(res.text);
-
-	const blocked: string[] = [];
-	const explicitlyAllowed: string[] = [];
-	const silent: string[] = [];
-
-	for (const bot of AI_BOTS) {
-		const match = rules.find((r) =>
-			r.agents.some((a) => a.toLowerCase() === bot.toLowerCase()),
-		);
-		if (!match) {
-			silent.push(bot);
-			continue;
-		}
-		const blocksRoot = match.disallows.some((d) => d === "/" || d === "");
-		const allowsRoot = match.allows.some((a) => a === "/" || a === "");
-		if (blocksRoot && !allowsRoot) blocked.push(bot);
-		else explicitlyAllowed.push(bot);
-	}
-
-	const wildcardBlocks = rules.find((r) => r.agents.includes("*"))
+	const wildcardBlocksAll = rules
+		.find((r) => r.agents.includes("*"))
 		?.disallows.some((d) => d === "/");
 
-	let score: number;
+	const blockedCitation: string[] = [];
+	const reachableCitation: string[] = [];
+	for (const bot of CITATION_BOTS) {
+		if (isBlocked(bot, rules, wildcardBlocksAll)) blockedCitation.push(bot);
+		else reachableCitation.push(bot);
+	}
+
+	const blockedTraining = TRAINING_BOTS.filter((b) =>
+		isBlocked(b, rules, wildcardBlocksAll),
+	);
+
+	// Score is purely a function of citation-relevant reachability. Training
+	// blocks are surfaced in copy but never move the number.
+	const ratio = reachableCitation.length / CITATION_BOTS.length;
+	const score = Math.round(100 * ratio);
+
+	const trainingNote =
+		blockedTraining.length > 0
+			? ` You also block ${blockedTraining.length} training-only crawler(s) (${blockedTraining.join(", ")}) — a valid IP/privacy choice that does not affect citation.`
+			: "";
+
 	let finding: string;
+	let detail: string;
+	let fix: string;
 	const codes: CheckCode[] = [];
 
-	if (blocked.length > 0 || wildcardBlocks) {
-		score = 0;
-		const list = wildcardBlocks ? "all crawlers (User-agent: *)" : blocked.join(", ");
-		finding = `AI crawlers blocked: ${list}.`;
-		if (wildcardBlocks) {
-			codes.push({ code: "crawlability.wildcard_block" });
-		} else {
-			codes.push({ code: "crawlability.ai_bots_blocked", data: { blocked } });
-		}
-	} else if (explicitlyAllowed.length >= 3) {
-		score = 100;
-		finding = `${explicitlyAllowed.length} AI crawlers explicitly allowed in robots.txt.`;
+	if (reachableCitation.length === 0) {
+		finding = wildcardBlocksAll
+			? "A wildcard Disallow: / blocks every crawler — you are invisible to AI search."
+			: "All AI search crawlers are blocked — you are invisible to AI search.";
+		detail = `No citation-relevant crawler can reach this page.${trainingNote}`;
+		fix =
+			"Remove the blanket block, or add User-agent-specific Allow: / rules for the search crawlers (OAI-SearchBot, PerplexityBot, Claude-SearchBot, Applebot, Amazonbot). If your goal was to opt out of training, block only the training crawlers instead.";
 		codes.push({
-			code: "crawlability.ok_explicit_allow",
-			data: { count: explicitlyAllowed.length, names: explicitlyAllowed },
+			code: wildcardBlocksAll
+				? "crawlability.wildcard_block"
+				: "crawlability.all_blocked",
+			data: { blockedCitation },
 		});
-	} else if (explicitlyAllowed.length > 0) {
-		score = 75;
-		finding = `${explicitlyAllowed.length} AI crawler(s) addressed; ${silent.length} silent (default-allow).`;
+	} else if (blockedCitation.length > 0) {
+		finding = `${blockedCitation.length} AI search crawler(s) blocked: ${blockedCitation.join(", ")}.`;
+		detail = `${reachableCitation.length}/${CITATION_BOTS.length} citation-relevant crawlers can reach you. Blocked: ${blockedCitation.join(", ")}.${trainingNote}`;
+		fix = `Add Allow: / (or remove the Disallow) for the blocked search/live crawlers you want to be cited by: ${blockedCitation.join(", ")}.`;
 		codes.push({
-			code: "crawlability.partial_explicit",
+			code: "crawlability.some_blocked",
 			data: {
-				allowedCount: explicitlyAllowed.length,
-				silentCount: silent.length,
-				allowed: explicitlyAllowed,
+				blockedCount: blockedCitation.length,
+				reachableCount: reachableCitation.length,
+				total: CITATION_BOTS.length,
+				blocked: blockedCitation,
 			},
 		});
 	} else {
-		score = 60;
-		finding = "robots.txt present but no AI crawler rules.";
-		codes.push({ code: "crawlability.no_ai_rules" });
+		finding = "All AI search crawlers can reach this page.";
+		detail = `${CITATION_BOTS.length}/${CITATION_BOTS.length} citation-relevant crawlers reachable.${trainingNote}`;
+		fix = blockedTraining.length
+			? "Maintain. Your training opt-out is correctly scoped and leaves the search crawlers allowed."
+			: "Maintain. All AI search and live-fetch crawlers are free to reach you.";
+		codes.push({
+			code: "crawlability.reachable_all",
+			data: { total: CITATION_BOTS.length, blockedTraining },
+		});
 	}
 
-	const detail = [
-		`Blocked: ${blocked.length ? blocked.join(", ") : "none"}.`,
-		`Explicitly allowed: ${explicitlyAllowed.length ? explicitlyAllowed.join(", ") : "none"}.`,
-		`Silent (default-allow): ${silent.length ? silent.join(", ") : "none"}.`,
-	].join(" ");
+	return result({ score, finding, detail, fix, codes });
+}
 
-	const fix =
-		blocked.length > 0 || wildcardBlocks
-			? "Remove the disallow directives for AI crawlers you want to be cited by, or add User-agent-specific Allow rules for the bots you do want."
-			: explicitlyAllowed.length === 0
-				? "Add explicit User-agent blocks for GPTBot, ClaudeBot, Claude-Web, Google-Extended, and PerplexityBot with Allow: / to remove ambiguity."
-				: "Maintain. Review the silent-default bots and decide whether to address them explicitly.";
-
+function result(x: {
+	score: number;
+	finding: string;
+	detail: string;
+	fix: string;
+	codes: CheckCode[];
+}): CheckResult {
 	return {
 		id: "crawlability",
 		category: "crawlability",
-		score,
-		status: statusFor(score),
-		finding,
-		detail,
-		fix,
+		score: x.score,
+		status: statusFor(x.score),
+		finding: x.finding,
+		detail: x.detail,
+		fix: x.fix,
 		weight: 1.5,
-		codes,
+		codes: x.codes,
 	};
+}
+
+/**
+ * A bot is blocked when its own rule disallows the root, or when the wildcard
+ * disallows the root and the bot has no rule of its own overriding it.
+ * robots.txt user-agent matching is case-insensitive (RFC 9309).
+ */
+function isBlocked(
+	bot: string,
+	rules: RobotsRule[],
+	wildcardBlocksAll: boolean | undefined,
+): boolean {
+	const own = rules.find((r) =>
+		r.agents.some((a) => a.toLowerCase() === bot.toLowerCase()),
+	);
+	if (own) {
+		const blocksRoot = own.disallows.some((d) => d === "/");
+		const allowsRoot = own.allows.some((a) => a === "/" || a === "");
+		return blocksRoot && !allowsRoot;
+	}
+	return Boolean(wildcardBlocksAll);
 }
 
 function parseRobots(text: string): RobotsRule[] {
