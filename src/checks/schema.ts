@@ -57,6 +57,11 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		types.has("NewsArticle") ||
 		types.has("BlogPosting");
 
+	// Answerability (folded-in AEO signal): FAQPage/QAPage schema whose
+	// questions are wired to acceptedAnswer is directly extractable by answer
+	// engines. Reward proper wiring; note the shell (FAQ type, no answers).
+	const faq = analyzeFaq(items, types);
+
 	let score = 0;
 	if (parsed.length === 0) {
 		score = 0;
@@ -66,6 +71,7 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		if (hasOrg) score += 20;
 		if (articleish) score += 15;
 		if (invalid === 0) score += 5;
+		if (faq === "wired") score += 10;
 	}
 	score = Math.min(100, score);
 
@@ -109,6 +115,12 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		});
 	}
 
+	if (faq === "wired") {
+		codes.push({ code: "schema.faq_wired" });
+	} else if (faq === "unwired") {
+		codes.push({ code: "schema.faq_unwired" });
+	}
+
 	return {
 		id: "schema",
 		category: "structure",
@@ -123,6 +135,32 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		weight: 1.0,
 		codes,
 	};
+}
+
+/**
+ * Classifies FAQ/QA structured data: "wired" = FAQPage/QAPage with at least
+ * one Question carrying an acceptedAnswer; "unwired" = the type is present but
+ * no answer is attached; "none" = no FAQ/QA schema at all.
+ */
+function analyzeFaq(items: Json[], types: Set<string>): "wired" | "unwired" | "none" {
+	if (!types.has("FAQPage") && !types.has("QAPage")) return "none";
+	for (const item of items) {
+		const t = item["@type"];
+		const isFaq =
+			t === "FAQPage" ||
+			t === "QAPage" ||
+			(Array.isArray(t) && t.some((v) => v === "FAQPage" || v === "QAPage"));
+		if (!isFaq) continue;
+		const main = item["mainEntity"] ?? item["mainEntityOfPage"];
+		const questions = Array.isArray(main) ? main : main ? [main] : [];
+		for (const q of questions) {
+			if (q && typeof q === "object") {
+				const ans = (q as Json)["acceptedAnswer"] ?? (q as Json)["suggestedAnswer"];
+				if (ans && typeof ans === "object") return "wired";
+			}
+		}
+	}
+	return "unwired";
 }
 
 function flatten(items: Json[]): Json[] {

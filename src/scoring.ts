@@ -4,6 +4,9 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
 	citability: 1.4,
 	structure: 1.3,
 	crawlability: 1.2,
+	// Being invisible to non-JS crawlers is serious, but it's near-binary and
+	// most server-rendered sites pass, so it sits below the content axes.
+	renderability: 1.1,
 	authority: 1.0,
 	freshness: 0.8,
 };

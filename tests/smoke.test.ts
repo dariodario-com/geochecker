@@ -21,8 +21,8 @@ const fakePage: FetchedPage = {
 	fetchedAt: new Date().toISOString(),
 };
 
-test("builtinChecks contains all 8 categories of checks", () => {
-	assert.equal(builtinChecks.length, 8);
+test("builtinChecks contains all 9 built-in checks", () => {
+	assert.equal(builtinChecks.length, 9);
 });
 
 test("each builtin check returns a well-formed CheckResult", async () => {

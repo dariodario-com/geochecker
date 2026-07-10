@@ -1,4 +1,4 @@
-import { parse } from "node-html-parser";
+import { parse, type HTMLElement } from "node-html-parser";
 import type { CheckCode, CheckResult, FetchedPage } from "../types.js";
 import { statusFor } from "../scoring.js";
 
@@ -75,6 +75,22 @@ export async function checkStructure(
 			codes.push({ code: "structure.no_main" });
 		}
 
+		// Answerability (folded-in AEO signal): question-form headings with a
+		// self-contained answer immediately below are highly extractable by
+		// answer engines. Reward them; flag the antipattern (a question heading
+		// with no answer beneath). Absence of questions is not penalized —
+		// plenty of legitimate pages aren't Q&A-shaped.
+		const ans = analyzeAnswerability([...h2s, ...h3s]);
+		if (ans.answered > 0) {
+			score += Math.min(8, ans.answered * 4);
+			codes.push({ code: "structure.answerable_headings", data: { answered: ans.answered } });
+		}
+		if (ans.unanswered > 0) {
+			score -= Math.min(6, ans.unanswered * 3);
+			issues.push(`${ans.unanswered} question heading(s) without an answer beneath`);
+			codes.push({ code: "structure.unanswered_questions", data: { unanswered: ans.unanswered } });
+		}
+
 		if (codes.length === 0) {
 			codes.push({
 				code: "structure.ok",
@@ -112,6 +128,42 @@ export async function checkStructure(
 		weight: 1.3,
 		codes,
 	};
+}
+
+const QUESTION_WORD =
+	/^(how|what|why|when|where|who|which|can|do|does|is|are|should|will|vad|hur|varför|när|vem|vilka|vilken|kan)\b/i;
+
+/** A heading is question-form if it ends with "?" or opens with a question word. */
+function isQuestionHeading(text: string): boolean {
+	const t = text.trim();
+	return t.endsWith("?") || QUESTION_WORD.test(t);
+}
+
+/**
+ * For each question-form heading, is there a substantive answer in the content
+ * that follows it (before the next heading)? Counts answered vs unanswered.
+ */
+function analyzeAnswerability(
+	headings: HTMLElement[],
+): { answered: number; unanswered: number } {
+	let answered = 0;
+	let unanswered = 0;
+	for (const h of headings) {
+		if (!isQuestionHeading(h.text ?? "")) continue;
+		let words = 0;
+		let sib: HTMLElement | null = h.nextElementSibling;
+		let hops = 0;
+		while (sib && hops < 4) {
+			if (/^h[1-6]$/.test(String(sib.rawTagName ?? "").toLowerCase())) break;
+			words += (sib.text ?? "").trim().split(/\s+/).filter(Boolean).length;
+			if (words >= 12) break;
+			sib = sib.nextElementSibling;
+			hops++;
+		}
+		if (words >= 12) answered++;
+		else unanswered++;
+	}
+	return { answered, unanswered };
 }
 
 function isEmptyShell(

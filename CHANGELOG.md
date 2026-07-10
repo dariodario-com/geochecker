@@ -5,6 +5,38 @@ All notable changes to `@dariodario/geochecker` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-07-10
+
+Adds a sixth category and folds answerability (AEO) signals into the categories
+they belong to. Additive — existing check ids, categories, and codes are
+unchanged; scores for JS-rendered pages will drop (correctly) and pages with
+question-form Q&A or wired FAQ schema will tick up slightly.
+
+### Added
+
+- **`renderability` category** — a new built-in check (`checkRenderability`)
+  measuring whether the primary content is present in the raw server HTML or
+  requires JavaScript to render. Most LLM crawlers (GPTBot, ClaudeBot,
+  PerplexityBot) do not execute JS, so a client-rendered SPA shell is invisible
+  to them. Category weight `1.1` (below the content axes, above authority).
+  Codes: `renderability.server_rendered`, `renderability.thin_raw_html`,
+  `renderability.spa_shell`, `renderability.spa_shell_noscript`,
+  `renderability.meta_refresh`.
+- **Answerability (AEO), folded in — no new category:**
+  - `structure` now rewards question-form headings that have a self-contained
+    answer immediately beneath, and flags the antipattern of a question heading
+    with no answer. New codes: `structure.answerable_headings`,
+    `structure.unanswered_questions`.
+  - `structure`'s schema check now rewards `FAQPage`/`QAPage` wired to
+    `acceptedAnswer` (directly extractable by answer engines) and notes the
+    unwired shell. New codes: `schema.faq_wired`, `schema.faq_unwired`.
+
+### Notes
+
+- Consumers that render a fixed list of categories should read
+  `report.categories` dynamically — a sixth entry now appears. Unknown category
+  keys should fall back to the engine's English strings.
+
 ## [2.0.0] - 2026-07-08
 
 Evidence-based recalibration. The AI-search landscape moved meaningfully in the

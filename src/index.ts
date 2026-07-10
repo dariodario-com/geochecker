@@ -10,6 +10,7 @@ import { checkLlmsTxt } from "./checks/llmstxt.js";
 import { checkFreshness } from "./checks/freshness.js";
 import { checkOg } from "./checks/og.js";
 import { checkAuthority } from "./checks/authority.js";
+import { checkRenderability } from "./checks/renderability.js";
 
 /** Built-in checks run by `runChecks` in default order. */
 export const builtinChecks: Check[] = [
@@ -21,6 +22,7 @@ export const builtinChecks: Check[] = [
 	checkFreshness,
 	checkOg,
 	checkAuthority,
+	checkRenderability,
 ];
 
 export type RunOptions = {

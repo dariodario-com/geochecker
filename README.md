@@ -9,7 +9,7 @@
 
 GEO (Generative Engine Optimization) is the practice of structuring web pages so that LLMs — ChatGPT, Claude, Gemini, Perplexity, Google AI Overviews — can find, understand, and cite your content.
 
-GEO Checker scores any URL across five categories with concrete, actionable findings.
+GEO Checker scores any URL across six categories with concrete, actionable findings.
 
 ## Quick start
 
@@ -43,6 +43,9 @@ CRAWLABILITY  (80/100)
 | **Crawlability** | `robots.txt` policy for AI crawlers, by **purpose** (search / live-fetch / training) | If you block the AI *search* crawlers you're invisible to those engines — but blocking *training-only* crawlers is a legitimate opt-out that does **not** reduce citation |
 | **Freshness** | Last-modified dates, content recency signals | LLMs weight recent content higher for time-sensitive queries |
 | **Authority** | Outbound links, mentions of credentialed sources, internal linking depth | LLMs use authority signals when picking which source to cite |
+| **Renderability** | Whether the primary content is in the raw server HTML vs. requiring JavaScript to appear | GPTBot, ClaudeBot, PerplexityBot and most LLM fetchers don't run JS — a client-rendered SPA looks blank to them |
+
+**Answerability (AEO)** signals are folded into the categories they belong to rather than split out: **Structure** rewards question-form headings backed by a self-contained answer, and **Structure**'s schema check rewards `FAQPage`/`QAPage` wired to `acceptedAnswer` — both make content directly extractable by answer engines.
 
 Each check returns a score, a finding, a detailed explanation, and a concrete fix.
 
@@ -105,7 +108,7 @@ const report = await runChecks("https://example.com", {
 | Flag | Description |
 |---|---|
 | `--json` | Output the full report as JSON (machine-readable) |
-| `--category <name>` | Show only one category (`structure`, `citability`, `crawlability`, `freshness`, `authority`) |
+| `--category <name>` | Show only one category (`structure`, `citability`, `crawlability`, `freshness`, `authority`, `renderability`) |
 | `--min-score <n>` | Exit with code 1 if overall < `n`. Use as a CI quality gate. |
 | `-h`, `--help` | Show help |
 
