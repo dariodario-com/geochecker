@@ -70,6 +70,8 @@ export async function checkCrawlability(
 	// the good outcome, not an ambiguity to punish.
 	if (!res || res.status >= 400) {
 		return result({
+			// The good outcome, not an ambiguity: nothing is blocked.
+			hasFindings: false,
 			score: 90,
 			finding:
 				"No robots.txt — AI search crawlers can reach you by default.",
@@ -153,7 +155,16 @@ export async function checkCrawlability(
 		});
 	}
 
-	return result({ score, finding, detail, fix, codes });
+	// Any blocked citation crawler is a finding, however good the score: being
+	// unreachable to even one of them is a concrete, actionable gap.
+	return result({
+		score,
+		finding,
+		detail,
+		fix,
+		codes,
+		hasFindings: blockedCitation.length > 0,
+	});
 }
 
 function result(x: {
@@ -162,12 +173,13 @@ function result(x: {
 	detail: string;
 	fix: string;
 	codes: CheckCode[];
+	hasFindings: boolean;
 }): CheckResult {
 	return {
 		id: "crawlability",
 		category: "crawlability",
 		score: x.score,
-		status: statusFor(x.score),
+		status: statusFor(x.score, x.hasFindings),
 		finding: x.finding,
 		detail: x.detail,
 		fix: x.fix,

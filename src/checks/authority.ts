@@ -125,7 +125,7 @@ export async function checkAuthority(
 		id: "authority",
 		category: "authority",
 		score,
-		status: statusFor(score),
+		status: statusFor(score, issues.length > 0),
 		finding,
 		detail,
 		fix,

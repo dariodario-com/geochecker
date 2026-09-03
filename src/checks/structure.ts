@@ -121,7 +121,7 @@ export async function checkStructure(
 		id: "structure",
 		category: "structure",
 		score,
-		status: statusFor(score),
+		status: statusFor(score, empty || issues.length > 0),
 		finding,
 		detail,
 		fix,

@@ -136,7 +136,7 @@ export async function checkCitability(
 		id: "citability",
 		category: "citability",
 		score,
-		status: statusFor(score),
+		status: statusFor(score, reasons.length > 0),
 		finding,
 		detail,
 		fix,

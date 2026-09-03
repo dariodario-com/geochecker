@@ -7,6 +7,7 @@ import { strict as assert } from "node:assert";
 import {
 	builtinChecks,
 	defineCheck,
+	statusFor,
 	type Check,
 	type CheckResult,
 	type FetchedPage,
@@ -54,4 +55,59 @@ test("defineCheck is a passthrough", () => {
 		finding: "ok", detail: "ok", fix: "ok", weight: 1,
 	});
 	assert.equal(defineCheck(c), c);
+});
+
+// --- statusFor: a check that named a problem is never `pass` ----------------
+// Status used to come from the score alone, so a check could score 80, be
+// labelled `pass`, and sit under the sentence "Heading structure has gaps".
+// A green tick next to a complaint is a contradiction, and a reader resolves
+// it by trusting neither half.
+
+test("statusFor keeps the plain score thresholds when nothing was found", () => {
+	assert.equal(statusFor(100), "pass");
+	assert.equal(statusFor(70), "pass");
+	assert.equal(statusFor(69), "warn");
+	assert.equal(statusFor(40), "warn");
+	assert.equal(statusFor(39), "fail");
+	assert.equal(statusFor(0), "fail");
+});
+
+test("statusFor caps a passing score at warn when the check named a problem", () => {
+	assert.equal(statusFor(100, true), "warn");
+	assert.equal(statusFor(80, true), "warn");
+	assert.equal(statusFor(70, true), "warn");
+});
+
+test("statusFor never upgrades a warn or a fail", () => {
+	// Findings can only make the label worse, never better — otherwise a bad
+	// score could be laundered into something reassuring.
+	assert.equal(statusFor(69, true), "warn");
+	assert.equal(statusFor(39, true), "fail");
+	assert.equal(statusFor(0, true), "fail");
+});
+
+test("a page with heading gaps is not reported as pass", async () => {
+	// Two H1s and no landmarks: scores well on word count, still a real gap.
+	const gappy: FetchedPage = {
+		...fakePage,
+		html:
+			"<html><head><title>Example page title that is long enough</title></head>" +
+			"<body><h1>One</h1><h1>Two</h1><p>" +
+			"word ".repeat(400) +
+			"</p></body></html>",
+	};
+	const results: CheckResult[] = await Promise.all(
+		builtinChecks.map((c) => c(gappy)),
+	);
+	const s = results.find((r) => r.id === "structure");
+	assert.ok(s, "structure check should produce a result");
+	assert.ok(
+		/gaps/i.test(s.finding),
+		`expected a gap finding, got: ${s.finding}`,
+	);
+	assert.notEqual(
+		s.status,
+		"pass",
+		"a finding that names gaps must not be labelled pass",
+	);
 });

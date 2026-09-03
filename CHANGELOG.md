@@ -5,6 +5,39 @@ All notable changes to `@dariodario/geochecker` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-09-03
+
+Fixes a contradiction between a check's status and its own finding text. No
+score changes: `overall` and every category score are byte-identical to 2.1.0.
+Some checks that reported `pass` now report `warn`, so anything counting
+statuses (a "N checks passed" line, a green/amber/red tally) will move.
+
+### Changed
+
+- **A check that named a problem is no longer labelled `pass`.** `status` was
+  derived from the score alone, and because a check aggregates several signals
+  it could score well while still enumerating real gaps — a page scored 80 on
+  structure and was reported `pass` directly under the sentence "Heading
+  structure has gaps: 64 H1 elements". A green tick beside a complaint is a
+  contradiction, and a reader resolves it by trusting neither half. Such checks
+  are now capped at `warn`.
+
+  Affected built-ins: `structure`, `og`, `authority`, `citability`, `schema`,
+  `crawlability`, `renderability`. `freshness` is unchanged (its finding states
+  a date, not a defect) and so is `llmstxt` (a missing `/llms.txt` is
+  explicitly fine for citation).
+
+  Findings can only make a label worse, never better: a `warn` or `fail` score
+  is never upgraded, so a poor score cannot be laundered into something
+  reassuring.
+
+### Added
+
+- **`statusFor(score, hasFindings?)` is now exported** from the package root, so
+  a custom check written with `defineCheck` can label itself the same way the
+  built-ins do. The second argument is optional and defaults to `false`, so the
+  existing one-argument behaviour is unchanged.
+
 ## [2.1.0] - 2026-07-10
 
 Adds a sixth category and folds answerability (AEO) signals into the categories

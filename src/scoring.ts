@@ -11,10 +11,29 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
 	freshness: 0.8,
 };
 
-export function statusFor(score: number): "pass" | "warn" | "fail" {
-	if (score >= 70) return "pass";
-	if (score >= 40) return "warn";
-	return "fail";
+/**
+ * Map a check's score to its status.
+ *
+ * `hasFindings` says whether the check actually NAMED a problem — the same
+ * branch that produced its `finding` string. It matters because status used to
+ * be derived from the score alone, and a check can score well while still
+ * reporting real gaps: a page with one H1 rule broken out of several scored 80
+ * and was labelled `pass`, so a UI rendered a green tick next to the sentence
+ * "Heading structure has gaps". Green-plus-a-complaint is a contradiction, and
+ * readers resolve it by trusting neither.
+ *
+ * So a check that named a problem cannot be `pass`; the worst it becomes is
+ * `warn`. Scores are untouched — `overall` and every category score are
+ * unchanged by this — because the score measures MAGNITUDE and the status
+ * answers "is there something here to do?". Those are different questions and
+ * conflating them is what produced the contradiction.
+ */
+export function statusFor(
+	score: number,
+	hasFindings = false,
+): "pass" | "warn" | "fail" {
+	const base = score >= 70 ? "pass" : score >= 40 ? "warn" : "fail";
+	return hasFindings && base === "pass" ? "warn" : base;
 }
 
 export function aggregate(

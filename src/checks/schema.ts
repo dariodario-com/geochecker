@@ -78,6 +78,9 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 	let finding: string;
 	let detail: string;
 	let fix: string;
+	// True on every branch that names a gap, so a well-scoring page with (say)
+	// no Organization schema is not labelled `pass` next to that sentence.
+	let hasFindings = true;
 	const codes: CheckCode[] = [];
 
 	if (parsed.length === 0) {
@@ -105,6 +108,7 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 			data: { recognizedTypes: [...types] },
 		});
 	} else {
+		hasFindings = false;
 		finding = `${parsed.length} structured data block(s), Organization present.`;
 		detail = `Recognized types: ${[...types].join(", ")}. Note: controlled 2026 tests (Ahrefs) found adding schema alone does not lift AI citations — its value is entity resolution and completeness, not mere presence.`;
 		fix =
@@ -125,7 +129,7 @@ export async function checkSchema(page: FetchedPage): Promise<CheckResult> {
 		id: "schema",
 		category: "structure",
 		score,
-		status: statusFor(score),
+		status: statusFor(score, hasFindings),
 		finding,
 		detail,
 		fix,

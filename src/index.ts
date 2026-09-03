@@ -141,6 +141,11 @@ export async function* runChecksStream(
  *     weight: 1,
  *   }));
  */
+/** Score-to-status mapping, exported so a consumer building its own checks
+ *  labels them the same way the built-ins do — including the rule that a check
+ *  which named a problem is never `pass`. See ./scoring.ts. */
+export { statusFor } from "./scoring.js";
+
 export function defineCheck(check: Check): Check {
 	return check;
 }

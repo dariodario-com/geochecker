@@ -86,7 +86,10 @@ export async function checkRenderability(page: FetchedPage): Promise<CheckResult
 		id: "renderability",
 		category: "renderability",
 		score,
-		status: statusFor(score),
+		status: statusFor(
+			score,
+			metaRefresh || shell || !(wordCount >= 250 && hasMainOrArticle),
+		),
 		finding,
 		detail,
 		fix,
