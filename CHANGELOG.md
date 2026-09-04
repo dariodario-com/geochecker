@@ -5,6 +5,37 @@ All notable changes to `@dariodario/geochecker` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-09-04
+
+Adds an `indexability` category with three checks. Additive: existing check ids,
+categories, codes and their scores are unchanged. **`overall` will move**, because
+the weighted set it averages is larger — a site that scored 80 on the old six
+categories is not broken if it now reads differently.
+
+### Added
+
+- **`indexability` category** (weight `1.2`) — whether a search engine may list
+  the page at all, as distinct from `crawlability`, which asks whether AI crawlers
+  are allowed in by robots.txt.
+  - **`indexable`** (weight `1.6`) — `noindex` via robots meta *or* the
+    `X-Robots-Tag` header; a site setting it in one place and not the other is
+    still noindexed. Scores 0 when found: absence from the index is not a degree
+    of quality, it voids everything above it. Also flags `nofollow`.
+    Codes: `indexability.noindex`, `indexability.nofollow`, `indexability.ok`.
+  - **`canonical`** (weight `1.0`) — self-referencing, cross-referencing, absent
+    or malformed. A cross-origin canonical is deliberate on a syndicated copy and
+    a mistake anywhere else, so it warns rather than fails.
+    Codes: `canonical.self`, `canonical.cross`, `canonical.missing`,
+    `canonical.malformed`.
+  - **`sitemap`** (weight `0.9`) — declared in robots.txt, present at the
+    conventional path, or absent. robots.txt takes precedence because it is the
+    site's own declaration.
+    Codes: `sitemap.declared`, `sitemap.undeclared`, `sitemap.missing`.
+
+Hit rates were measured on 172 real sites before these were written rather than
+guessed: 26% had no canonical, 15% no sitemap, and 3% were actively serving
+`noindex` — that last group is absent from Google today and almost never knows it.
+
 ## [2.2.0] - 2026-09-03
 
 Fixes a contradiction between a check's status and its own finding text. No

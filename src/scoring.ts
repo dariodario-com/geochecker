@@ -8,6 +8,10 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
 	// most server-rendered sites pass, so it sits below the content axes.
 	renderability: 1.1,
 	authority: 1.0,
+	// Whether an engine may list the page at all. Weighted just under the content
+	// axes: it is mostly binary and most sites pass, but when it fails it voids
+	// everything above it — 3% of sampled prospects were serving `noindex`.
+	indexability: 1.2,
 	freshness: 0.8,
 };
 

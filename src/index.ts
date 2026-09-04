@@ -11,6 +11,11 @@ import { checkFreshness } from "./checks/freshness.js";
 import { checkOg } from "./checks/og.js";
 import { checkAuthority } from "./checks/authority.js";
 import { checkRenderability } from "./checks/renderability.js";
+import {
+	checkIndexable,
+	checkCanonical,
+	checkSitemap,
+} from "./checks/indexability.js";
 
 /** Built-in checks run by `runChecks` in default order. */
 export const builtinChecks: Check[] = [
@@ -23,6 +28,9 @@ export const builtinChecks: Check[] = [
 	checkOg,
 	checkAuthority,
 	checkRenderability,
+	checkIndexable,
+	checkCanonical,
+	checkSitemap,
 ];
 
 export type RunOptions = {
