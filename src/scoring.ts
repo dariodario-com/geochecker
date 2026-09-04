@@ -12,6 +12,10 @@ const CATEGORY_WEIGHT: Record<Category, number> = {
 	// axes: it is mostly binary and most sites pass, but when it fails it voids
 	// everything above it — 3% of sampled prospects were serving `noindex`.
 	indexability: 1.2,
+	// Whether the page makes specific, quotable, attributable claims — the thing
+	// citation actually depends on. No built-in check produces this: it needs
+	// judgement over prose, so it is supplied by the caller via `extraChecks`.
+	answerability: 1.3,
 	freshness: 0.8,
 };
 

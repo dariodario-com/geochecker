@@ -5,6 +5,32 @@ All notable changes to `@dariodario/geochecker` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-09-04
+
+Makes the `extraChecks` extension point safe to use for work this package
+deliberately will not do itself, and reserves a category for it. No behaviour
+change for anyone using only the built-ins.
+
+### Changed
+
+- **A caller-supplied check that throws is now dropped, not fatal.** `extraChecks`
+  exists for network calls, paid APIs and model inference — all of which fail
+  sometimes — and one of them throwing used to reject the whole scan through
+  `Promise.all`. Extras are now settled individually and a rejection is omitted
+  from the report. **Built-in checks are deliberately still fatal**: they are pure
+  functions over already-fetched HTML, so one throwing is a bug in this package
+  and should be loud rather than silently missing from someone's report.
+
+### Added
+
+- **`onCheckError(error)`** in `RunOptions` — called when a caller-supplied check
+  is dropped, so the failure is visible instead of silent.
+- **`answerability` category** (weight `1.3`) — whether a page makes specific,
+  quotable, attributable claims, which is what citation actually depends on. No
+  built-in produces it: it needs judgement over prose rather than parsing, so it
+  is supplied through `extraChecks`. The category is reserved here so such a
+  check aggregates and weights consistently across consumers.
+
 ## [2.3.0] - 2026-09-04
 
 Adds an `indexability` category with three checks. Additive: existing check ids,

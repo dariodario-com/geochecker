@@ -7,6 +7,7 @@ import { strict as assert } from "node:assert";
 import {
 	builtinChecks,
 	defineCheck,
+	runChecks,
 	statusFor,
 	type Check,
 	type CheckResult,
@@ -169,5 +170,86 @@ test("indexability checks all declare the indexability category", async () => {
 		const r = results.find((x) => x.id === id);
 		assert.ok(r, `${id} should run`);
 		assert.equal(r.category, "indexability");
+	}
+});
+
+// --- extraChecks isolation --------------------------------------------------
+// The extension point exists for things this package will not do itself:
+// network calls, paid APIs, model inference. All of those fail sometimes, and
+// one failing must not cost the caller the entire scan.
+//
+// fetch is stubbed so these stay hermetic — this file does not hit the network.
+
+const realFetch = globalThis.fetch;
+function stubFetch() {
+	globalThis.fetch = (async () =>
+		new Response(fakePage.html, {
+			status: 200,
+			headers: { "content-type": "text/html" },
+		})) as typeof fetch;
+}
+function restoreFetch() {
+	globalThis.fetch = realFetch;
+}
+
+test("a throwing extraCheck is dropped, not fatal", async () => {
+	stubFetch();
+	try {
+		const boom: Check = async () => {
+			throw new Error("upstream exploded");
+		};
+		const errors: unknown[] = [];
+		const report = await runChecks("https://example.com/", {
+			checks: [builtinChecks[0]],
+			extraChecks: [boom],
+			onCheckError: (e) => errors.push(e),
+		});
+		assert.equal(report.checks.length, 1, "the good check still lands");
+		assert.equal(errors.length, 1, "the caller is told what failed");
+		assert.match(String((errors[0] as Error).message), /upstream exploded/);
+	} finally {
+		restoreFetch();
+	}
+});
+
+test("a working extraCheck is aggregated like any other", async () => {
+	stubFetch();
+	try {
+		const extra: Check = async () => ({
+			id: "answerability",
+			category: "answerability",
+			score: 60,
+			status: "warn",
+			finding: "f",
+			detail: "d",
+			fix: "x",
+			weight: 1,
+			codes: [{ code: "answerability.thin" }],
+		});
+		const report = await runChecks("https://example.com/", {
+			checks: [builtinChecks[0]],
+			extraChecks: [extra],
+		});
+		assert.ok(report.checks.some((c) => c.id === "answerability"));
+		assert.ok(report.categories.some((c) => c.category === "answerability"));
+	} finally {
+		restoreFetch();
+	}
+});
+
+test("a throwing BUILT-IN check is still fatal", async () => {
+	// Deliberate asymmetry: a builtin throwing is a bug in this package and
+	// should be loud, not silently missing from somebody's report.
+	stubFetch();
+	try {
+		const boom: Check = async () => {
+			throw new Error("builtin bug");
+		};
+		await assert.rejects(
+			() => runChecks("https://example.com/", { checks: [boom] }),
+			/builtin bug/,
+		);
+	} finally {
+		restoreFetch();
 	}
 });

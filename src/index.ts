@@ -42,6 +42,9 @@ export type RunOptions = {
 	checks?: Check[];
 	/** Add to the default check set (runs in addition to builtins). */
 	extraChecks?: Check[];
+	/** Called when a caller-supplied check throws. The check is dropped from the
+	 *  report rather than failing the scan — see runChecks. */
+	onCheckError?: (error: unknown) => void;
 };
 
 /**
@@ -57,14 +60,36 @@ export async function runChecks(
 	const page = await fetchPage(url);
 	opts.onFetched?.(page);
 
-	const all = [...(opts.checks ?? builtinChecks), ...(opts.extraChecks ?? [])];
-	const results = await Promise.all(
-		all.map(async (check) => {
-			const r = await check(page);
-			opts.onCheck?.(r);
-			return r;
+	const run = async (check: Check) => {
+		const r = await check(page);
+		opts.onCheck?.(r);
+		return r;
+	};
+
+	// Built-in checks are pure functions over already-fetched HTML: if one
+	// throws that is a bug in this package and should be loud, so they stay
+	// under Promise.all.
+	const builtins = opts.checks ?? builtinChecks;
+	// Caller-supplied checks are a different risk. They are the extension point
+	// for things this package deliberately will not do — network calls, paid
+	// APIs, model inference — and any of those can fail on a Tuesday. One of
+	// them throwing must cost that check and nothing else, so they are settled
+	// individually and a rejection is dropped from the report.
+	const extras = opts.extraChecks ?? [];
+
+	const [builtinResults, extraResults] = await Promise.all([
+		Promise.all(builtins.map(run)),
+		Promise.allSettled(extras.map(run)),
+	]);
+
+	const results = [
+		...builtinResults,
+		...extraResults.flatMap((r) => {
+			if (r.status === "fulfilled") return [r.value];
+			opts.onCheckError?.(r.reason);
+			return [];
 		}),
-	);
+	];
 
 	return aggregate(results, {
 		url: page.url,

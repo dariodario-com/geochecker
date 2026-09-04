@@ -7,7 +7,8 @@ export type Category =
 	| "freshness"
 	| "authority"
 	| "renderability"
-	| "indexability";
+	| "indexability"
+	| "answerability";
 
 /**
  * A structured, language-independent identifier for a specific finding within
