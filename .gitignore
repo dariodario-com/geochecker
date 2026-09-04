@@ -8,3 +8,10 @@ dist/
 # Editor
 .vscode/
 .idea/
+
+# Publish plumbing — local only. Neither holds a secret VALUE (.npmrc expands
+# ${NPM_TOKEN} from the environment at run time), but this repo is PUBLIC and
+# naming which credentials exist, and the vault they come from, is free
+# reconnaissance for no benefit to anyone reading the source.
+.npmrc
+.env.refs
