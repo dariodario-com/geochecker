@@ -15,3 +15,9 @@ dist/
 # reconnaissance for no benefit to anyone reading the source.
 .npmrc
 .env.refs
+
+# Agent/contributor guidance for OUR sessions. README.md is the public document;
+# this one mostly helps us, and it is the file that leaked internal architecture
+# once already. Keeping it untracked removes the class of mistake rather than
+# relying on remembering to sanitise it.
+CLAUDE.md
