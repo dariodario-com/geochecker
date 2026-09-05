@@ -9,7 +9,7 @@
 
 GEO (Generative Engine Optimization) is the practice of structuring web pages so that LLMs — ChatGPT, Claude, Gemini, Perplexity, Google AI Overviews — can find, understand, and cite your content.
 
-GEO Checker scores any URL across six categories with concrete, actionable findings.
+GEO Checker scores any URL across seven categories — twelve checks — with concrete, actionable findings.
 
 ## Quick start
 
@@ -44,8 +44,18 @@ CRAWLABILITY  (80/100)
 | **Freshness** | Last-modified dates, content recency signals | LLMs weight recent content higher for time-sensitive queries |
 | **Authority** | Outbound links, mentions of credentialed sources, internal linking depth | LLMs use authority signals when picking which source to cite |
 | **Renderability** | Whether the primary content is in the raw server HTML vs. requiring JavaScript to appear | GPTBot, ClaudeBot, PerplexityBot and most LLM fetchers don't run JS — a client-rendered SPA looks blank to them |
+| **Indexability** | `noindex` (meta *and* `X-Robots-Tag`), canonical tags, sitemap discoverability | AI search products that build on a search index inherit its exclusions — a `noindex` page is invisible to them no matter how good it is |
 
-**Answerability (AEO)** signals are folded into the categories they belong to rather than split out: **Structure** rewards question-form headings backed by a self-contained answer, and **Structure**'s schema check rewards `FAQPage`/`QAPage` wired to `acceptedAnswer` — both make content directly extractable by answer engines.
+On-page **answerability (AEO)** signals are folded into the categories they belong to:
+**Structure** rewards question-form headings backed by a self-contained answer, and its
+schema check rewards `FAQPage`/`QAPage` wired to `acceptedAnswer` — both make content
+directly extractable by answer engines.
+
+The scoring model also *reserves* an **`answerability`** category for the judgement no
+parser can make — whether the prose actually says anything worth quoting. Nothing in
+this package fills it: that needs a language model, and this package makes **zero
+third-party API calls**. Supply it yourself through `extraChecks` (below) if you want
+it; the category and its weight are already there.
 
 Each check returns a score, a finding, a detailed explanation, and a concrete fix.
 
@@ -62,6 +72,22 @@ const report = await runChecks("https://example.com");
 console.log(report.overall);          // 0–100
 console.log(report.categories);       // per-category scores
 console.log(report.checks);           // every individual check + fix
+```
+
+### Adding your own checks
+
+`extraChecks` takes checks of your own — including ones that call an API you hold the
+key for. They run alongside the built-ins but are isolated from them: **a caller-supplied
+check that throws is dropped and reported through `onCheckError`, while the scan
+completes.** A built-in that throws still fails the scan. The asymmetry is deliberate —
+a built-in that cannot run means the score itself is wrong, but your optional signal
+going down should cost you that section and nothing else.
+
+```ts
+const report = await runChecks("https://example.com", {
+  extraChecks: [myCheck],
+  onCheckError: (err) => console.warn("extra check skipped:", err),
+});
 ```
 
 ### Streaming
