@@ -6,7 +6,18 @@ const UA =
 const TIMEOUT_MS = 12_000;
 const MAX_BYTES = 2_500_000;
 
-export async function fetchPage(url: string): Promise<FetchedPage> {
+export type FetchOptions = {
+	/** Sent as `Accept-Language`. A site that negotiates language serves the
+	 *  version its visitors see only if this matches them; the default `en`
+	 *  hands a Swedish or German site's English fallback to every check that
+	 *  reads prose. Pass the audience's language, e.g. `"sv"` or `"de,en;q=0.5"`. */
+	acceptLanguage?: string;
+};
+
+export async function fetchPage(
+	url: string,
+	{ acceptLanguage = "en;q=0.9" }: FetchOptions = {},
+): Promise<FetchedPage> {
 	const target = normalizeUrl(url);
 
 	const controller = new AbortController();
@@ -21,7 +32,7 @@ export async function fetchPage(url: string): Promise<FetchedPage> {
 			headers: {
 				"User-Agent": UA,
 				Accept: "text/html,application/xhtml+xml",
-				"Accept-Language": "en;q=0.9",
+				"Accept-Language": acceptLanguage,
 			},
 		});
 	} finally {

@@ -1,6 +1,6 @@
 {
   "name": "@dariodario/geochecker",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Open-source Generative Engine Optimization (GEO) scorer. Check any site's readiness for AI search.",
   "license": "MIT",
   "author": "Dario Dario <hello@dariodario.com> (https://dariodario.com)",
@@ -30,7 +30,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "geochecker": "./dist/cli.js"

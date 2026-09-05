@@ -78,7 +78,7 @@ export async function checkFreshness(
 				genre === "article"
 					? "Expose at least one date signal: a Last-Modified header, a <time datetime=\"YYYY-MM-DD\"> element near the title, or schema datePublished/dateModified."
 					: "Optional for brand pages. If you make claims that change over time (pricing, statistics, product capabilities), add a 'last updated' date so LLMs can reason about staleness.",
-			weight: 0.9,
+			weight: 1.0,
 			codes: [
 				{
 					code:

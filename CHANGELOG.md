@@ -5,6 +5,17 @@ All notable changes to `@dariodario/geochecker` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-09-05
+
+- `runChecks` / `runChecksStream` accept `acceptLanguage`, sent as the page
+  fetch's `Accept-Language`. Until now every fetch asked for English, so a site
+  that negotiates language handed its English fallback to every check that reads
+  prose — the page its visitors never see. Default unchanged (`en;q=0.9`).
+- `freshness` weighs 1.0 on every path. It was 0.9 when no date signal was found
+  and 1.0 when one was, so a page's category weight moved with its own result.
+- `package.json` is exported, so consumers can read the engine version they are
+  running (`import pkg from "@dariodario/geochecker/package.json"`).
+
 ## [2.4.0] - 2026-09-04
 
 Makes the `extraChecks` extension point safe to use for work this package

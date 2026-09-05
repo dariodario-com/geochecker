@@ -34,6 +34,10 @@ export const builtinChecks: Check[] = [
 ];
 
 export type RunOptions = {
+	/** `Accept-Language` for the page fetch — the audience's language, so a
+	 *  language-negotiating site serves the version its visitors actually see.
+	 *  Defaults to English. */
+	acceptLanguage?: string;
 	/** Called after the page is fetched, before any checks run. */
 	onFetched?: (page: FetchedPage) => void;
 	/** Called once per check as it completes. */
@@ -57,7 +61,7 @@ export async function runChecks(
 	url: string,
 	opts: RunOptions = {},
 ): Promise<Report> {
-	const page = await fetchPage(url);
+	const page = await fetchPage(url, { acceptLanguage: opts.acceptLanguage });
 	opts.onFetched?.(page);
 
 	const run = async (check: Check) => {
